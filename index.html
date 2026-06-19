@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>3D Driving Simulator</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css" />
+    <link rel="stylesheet" href="style.css"/>
+    <script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
+</head>
+<body>
+
+    <div id="skybox"></div>
+
+    <div id="camera-perspective">
+        <div id="camera-tilt">
+            <div id="map-rotator">
+                <div id="map-subpixel">
+                    <div id="map-container">
+                        <div id="map"></div>
+                    </div>
+                </div>
+            </div>
+            <div id="vehicle-overlay">
+                <div id="vehicle-graphic"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="ui-top" class="panel">
+        <div id="ui-top-controls">
+            <select id="vehicle-select">
+                <option value="car">🚗 Car</option>
+                <option value="bus">🚌 Bus</option>
+                <option value="plane">✈️ Plane</option>
+            </select>
+            
+            <select id="map-layer-select">
+                <option value="sat">🛰️ Satellite</option>
+                <option value="hybrid">🗺️ Hybrid</option>
+            </select>
+
+            <button class="btn-ui" onclick="toggleGPS()" style="background: var(--accent); color: white;">📍 GPS</button>
+            <button class="btn-ui" id="btn-orientation" onclick="toggleOrientation()">🧭 North Up</button>
+            <button class="btn-ui" onclick="toggleSettings()" style="background: #475569; color: white;">⚙️ Settings</button>
+        </div>
+        
+        <button class="btn-ui" id="btn-minimize" onclick="toggleUiTop()" aria-label="Minimizar panel" style="background: rgba(255, 255, 255, 0.1); border: 1px solid var(--border-panel); color: white; padding: 8px; display: flex; align-items: center; justify-content: center; min-width: 38px;">
+            ➖
+        </button>
+    </div>
+
+    <div id="controls-help">
+        <b id="help-title">Keep Chrome zoom at 67%</b><br>
+        <span id="help-text"><br></span>
+    </div>
+
+    <div id="settings-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content panel">
+            <div class="modal-header">
+                <h2>⚙️ Settings</h2>
+                <button class="btn-close" onclick="toggleSettings()">×</button>
+            </div>
+            <div class="modal-body">
+
+                <div class="settings-section" style="border-color: #10b981; background: rgba(16, 185, 129, 0.1);">
+                    <h3 style="color: #10b981;">🛡️ Physics & Environment</h3>
+                    <label style="align-items: center; cursor: pointer;">
+                        Vehicle Collision
+                        <input type="checkbox" id="set-collision" onchange="toggleCollision(this.checked)" style="width: 20px; height: 20px;">
+                    </label>
+                    <label style="align-items: center; cursor: pointer; color: #ef4444; margin-top: 10px;">
+                        Show Collision Zones (Red)
+                        <input type="checkbox" id="set-debug-collision" onchange="toggleDebugCollision(this.checked)" style="width: 20px; height: 20px;">
+                    </label>
+                </div>
+
+                <div class="settings-section" style="border-color: #8b5cf6; background: rgba(139, 92, 246, 0.1);">
+                    <h3 style="color: #8b5cf6;">🎥 Camera Mode</h3>
+                    <div style="display: flex; gap: 10px; margin-top: 10px;">
+                        <button class="btn-ui active" id="btn-mode-3d" onclick="setRenderMode('3D')" style="flex:1;">3D Mode</button>
+                        <button class="btn-ui" id="btn-mode-2d" onclick="setRenderMode('2D')" style="flex:1;">2D Mode</button>
+                    </div>
+                    
+                    <label style="margin-top: 15px;">Camera Tilt: <span id="val-cam-tilt">0</span>°</label>
+                    <input type="range" class="slider" id="set-cam-tilt" min="-90" max="90" step="1" value="0" oninput="updateCameraTilt(this.value)">
+                </div>
+                
+                <div class="settings-section">
+                    <h3>🔍 Scales</h3>
+                    <label>Vehicle Size: <span id="val-veh-size">1.0</span>x</label>
+                    <input type="range" class="slider" id="set-veh-size" min="0.5" max="5" step="0.1" value="1.0" oninput="updateVehicleScale(this.value)">
+
+                    <label>Map Zoom: <span id="val-map-zoom">18</span></label>
+                    <input type="range" class="slider" id="set-map-zoom" min="12" max="22" step="0.5" value="18" oninput="updateMapZoom(this.value)">
+
+                    <label>Camera Zoom: <span id="val-cam-zoom">1.0</span>x</label>
+                    <input type="range" class="slider" id="set-cam-zoom" min="0.3" max="3.0" step="0.05" value="1.0" oninput="updateCameraZoom(this.value)">
+                </div>
+
+                <div class="settings-section">
+                    <h3>🎮 Steering Control</h3>
+                    <select id="set-steering-mode" class="input-select" onchange="updateSteeringMode(this.value)">
+                        <option value="arrows">D-Pad / Buttons</option>
+                        <option value="joystick">Virtual Joystick</option>
+                    </select>
+
+                    <label style="margin-top: 15px;">Sensitivity: <span id="val-steering-sens">1.0</span>x</label>
+                    <input type="range" class="slider" id="set-steering-sens" min="0.1" max="3.0" step="0.1" value="1.0" oninput="updateSteeringSensitivity(this.value)">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="ui-bottom-left" class="panel">
+        <p class="info-text" id="coord-info">Lat: 0.00000, Lng: 0.00000</p>
+        <p class="info-text" id="alt-info" style="display: none;">ALT: 0 m</p>
+    </div>
+
+    <div id="ui-bottom-right" class="panel">
+        <div class="speed-display">
+            <h1 class="speed-val" id="speed-val">000</h1>
+            <span style="color: var(--text-muted); font-weight: bold;" id="speed-unit-text">KPH</span>
+        </div>
+        <div class="speed-controls">
+            <button class="unit-btn active" onclick="setSpeedUnit('KPH')">KPH</button>
+            <button class="unit-btn" onclick="setSpeedUnit('MPH')">MPH</button>
+            <button class="unit-btn" onclick="setSpeedUnit('KNOTS')">KNOTS</button>
+        </div>
+    </div>
+
+    <div id="gps-window" class="panel">
+        <div id="gps-header">
+            <span>📡 GPS Navigation</span>
+            <span style="font-size: 1.2rem; cursor: pointer;" onclick="toggleGPS()">×</span>
+        </div>
+        <div id="gps-content">
+            <div class="input-group">
+                <input type="text" id="gps-search" placeholder="Search destination...">
+                <button onclick="searchLocation()">Go</button>
+            </div>
+            <div id="gps-nav-info">
+                <div style="font-size: 0.9rem; color: var(--text-muted);">Navigating to Destination</div>
+                <div style="font-size: 1.5rem; font-weight: bold;" id="gps-dist">0.00 km</div>
+                <div class="compass-container">
+                    <svg id="gps-arrow" viewBox="0 0 24 24" width="30" height="30" fill="#22c55e">
+                        <path d="M12 2L4 20L12 17L20 20Z" />
+                    </svg>
+                </div>
+                <div class="input-group" style="margin-top: 5px;">
+                    <button style="flex: 1;" onclick="teleportToDest()">Teleport</button>
+                    <button class="danger" style="flex: 1;" onclick="cancelNavigation()">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="mobile-controls-ground">
+        <div id="d-pad-container" class="steering-module">
+            <div class="d-pad-btn" id="btn-left">←</div>
+            <div class="d-pad-btn" id="btn-right">→</div>
+        </div>
+        <div id="joystick-container" class="steering-module" style="display:none;">
+            <div id="joystick-base">
+                <div id="joystick-knob"></div>
+            </div>
+        </div>
+        <div class="pedal-container" id="pedal-wrapper">
+            <div class="pedal pedal-brake" id="btn-brake">Brake</div>
+            <div class="pedal pedal-gas" id="btn-gas">Gas</div>
+        </div>
+    </div>
+
+    <div id="mobile-controls-plane" style="display:none;">
+        <div id="plane-joystick-base" class="steering-module" style="width: 150px; height: 150px; bottom: 40px; left: 40px; border-radius: 50%;">
+            <div id="plane-joystick-knob" style="width: 50px; height: 50px; border-radius: 50%;"></div>
+        </div>
+        <div id="plane-throttle-base" style="position: absolute; bottom: 40px; right: 40px; width: 60px; height: 250px; background: rgba(0,0,0,0.4); border: 3px solid rgba(255,255,255,0.3); border-radius: 30px; display: flex; flex-direction: column; align-items: center;">
+            <div style="color: white; font-weight: bold; margin-top: 10px;">PWR</div>
+            <div id="plane-throttle-knob" style="width: 70px; height: 40px; background: #eab308; border-radius: 10px; position: absolute; bottom: 0; box-shadow: 0 4px 10px rgba(0,0,0,0.5);"></div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
