@@ -1,4 +1,4 @@
-:root {
+root {
     --bg-panel: rgba(15, 23, 42, 0.85);
     --border-panel: rgba(255, 255, 255, 0.15);
     --accent: #3b82f6;
@@ -23,10 +23,11 @@ body, html {
 body.is-3d #skybox { opacity: 1; }
 body.is-3d #map-container { background: transparent; }
 
+/* CORREGIDO: Se cambió 100vw/100vh por 100% para evitar el desborde con la barra de Chrome */
 #camera-perspective { 
-    perspective: 1200px; width: 100vw; height: 100vh; overflow: hidden; position: relative; z-index: 1;
+    perspective: 1200px; width: 100%; height: 100%; overflow: hidden; position: relative; z-index: 1;
     transform-origin: center center;
-    transition: transform 0.1s ease-out; /* Transición suave en tiempo real */
+    transition: transform 0.1s ease-out;
     will-change: transform;
 }
 #camera-tilt { width: 100%; height: 100%; transform-style: preserve-3d; transform-origin: center center; }
@@ -105,10 +106,20 @@ select, .btn-ui { background: rgba(255, 255, 255, 0.9); border: none; padding: 8
 }
 
 #controls-help { position: absolute; top: 80px; left: 50%; transform: translateX(-50%); text-align: center; color: white; text-shadow: 0 2px 4px black; z-index: 1000; pointer-events: none;}
-#ui-bottom-left { bottom: 20px; left: 20px; padding: 15px; display: flex; flex-direction: column; gap: 5px; pointer-events: none; }
+
+/* CORREGIDO: Se agregaron variables env() para respetar la barra de gestos/márgenes del sistema móvil */
+#ui-bottom-left { 
+    bottom: calc(20px + env(safe-area-inset-bottom, 0px)); 
+    left: calc(20px + env(safe-area-inset-left, 0px)); 
+    padding: 15px; display: flex; flex-direction: column; gap: 5px; pointer-events: none; 
+}
 .info-text { font-family: monospace; color: var(--text-muted); font-size: 1rem; margin: 0; font-weight: bold; }
 
-#ui-bottom-right { bottom: 20px; right: 20px; padding: 20px; display: flex; flex-direction: column; align-items: flex-end; min-width: 150px; }
+#ui-bottom-right { 
+    bottom: calc(20px + env(safe-area-inset-bottom, 0px)); 
+    right: calc(20px + env(safe-area-inset-right, 0px)); 
+    padding: 20px; display: flex; flex-direction: column; align-items: flex-end; min-width: 150px; 
+}
 .speed-display { display: flex; align-items: baseline; gap: 10px; }
 .speed-val { font-size: 3.5rem; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1; margin: 0; text-shadow: 0 0 10px rgba(255,255,255,0.2); }
 .unit-btn { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; transition: 0.2s; }
@@ -124,9 +135,11 @@ button.danger { background: var(--danger); }
 #gps-nav-info { background: rgba(0,0,0,0.3); border-radius: 8px; padding: 15px; display: none; flex-direction: column; gap: 10px; text-align: center; }
 
 /* MODAL */
-.modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.6); z-index: 5000; display: flex; justify-content: center; align-items: center; }
-.modal-content { width: 90%; max-width: 500px; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden; }
-.modal-header { background: rgba(255,255,255,0.1); padding: 15px 20px; display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-panel); }
+/* CORREGIDO: Asegurar que el overlay no se desborde */
+.modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 5000; display: flex; justify-content: center; align-items: center; }
+/* CORREGIDO: max-height cambiado a % para que sea relativo al contenedor visible real */
+.modal-content { width: 90%; max-width: 500px; max-height: 85%; display: flex; flex-direction: column; overflow: hidden; }
+.modal-header { background: rgba(255,255,255,0.1); padding: 15px 20px; display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-panel); flex-shrink: 0; }
 .modal-header h2 { margin: 0; font-size: 1.2rem; }
 .btn-close { background: transparent; color: white; font-size: 1.5rem; padding: 0; border: none; cursor: pointer; }
 .modal-body { padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 20px; }
@@ -138,7 +151,7 @@ button.danger { background: var(--danger); }
 .input-select { width: 100%; padding: 10px; border-radius: 6px; margin-top: 5px; }
 
 /* CONTROLES MÓVILES */
-#mobile-controls-ground, #mobile-controls-plane { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 3000; }
+#mobile-controls-ground, #mobile-controls-plane { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 3000; }
 .steering-module { position: absolute; bottom: 30px; left: 30px; pointer-events: auto; }
 #d-pad-container { display: flex; gap: 20px; }
 .d-pad-btn { width: 90px; height: 200px; background: rgba(255, 255, 255, 0.15); border: 3px solid rgba(255, 255, 255, 0.4); border-radius: 15px; display: flex; justify-content: center; align-items: center; color: white; font-size: 2.5rem; font-weight: bold; user-select: none; }
@@ -152,7 +165,13 @@ button.danger { background: var(--danger); }
 
 #plane-throttle-base { pointer-events: auto; touch-action: none; }
 
-.pedal-container { position: absolute; bottom: 30px; right: 30px; display: flex; gap: 20px; pointer-events: auto; align-items: flex-end; }
+/* CORREGIDO: Añadido soporte para safe-areas del dispositivo */
+.pedal-container { 
+    position: absolute; 
+    bottom: calc(30px + env(safe-area-inset-bottom, 0px)); 
+    right: calc(30px + env(safe-area-inset-right, 0px)); 
+    display: flex; gap: 20px; pointer-events: auto; align-items: flex-end; 
+}
 .pedal { width: 90px; border: 3px solid rgba(255, 255, 255, 0.5); border-radius: 15px; display: flex; justify-content: center; align-items: center; color: white; font-weight: bold; font-size: 1.5rem; user-select: none; }
 .pedal-gas { height: 200px; background: rgba(16, 185, 129, 0.4); }
 .pedal-gas:active { background: rgba(16, 185, 129, 0.7); }
@@ -160,3 +179,40 @@ button.danger { background: var(--danger); }
 .pedal-brake:active { background: rgba(239, 68, 68, 0.7); }
 
 .leaflet-control-container { display: none; }
+
+/* ==========================================================================
+   NUEVO BLOCK: OPTIMIZACIÓN PARA MÓVILES EN HORIZONTAL (PANTALLAS BAJAS)
+   ========================================================================== */
+@media (max-height: 550px) {
+    #ui-top { top: 10px; }
+    #gps-window { top: 60px; }
+
+    /* Reducción de tamaño del velocímetro y pedales para evitar que se corten */
+    #ui-bottom-right { 
+        bottom: calc(10px + env(safe-area-inset-bottom, 0px)); 
+        right: calc(10px + env(safe-area-inset-right, 0px));
+        padding: 12px;
+    }
+    .speed-val { font-size: 2.3rem; }
+    
+    .pedal-container {
+        bottom: calc(15px + env(safe-area-inset-bottom, 0px));
+        right: calc(15px + env(safe-area-inset-right, 0px));
+        gap: 12px;
+    }
+    .pedal { width: 75px; height: 130px; font-size: 1.1rem; }
+    .d-pad-btn { width: 75px; height: 130px; font-size: 1.8rem; }
+    .steering-module { bottom: 15px; left: 15px; }
+
+    /* Ajuste crítico para el modal de Ajustes (Evita que desaparezca abajo) */
+    .modal-content {
+        max-height: 92%;
+    }
+    .modal-body {
+        padding: 12px 15px;
+        gap: 12px;
+    }
+    .settings-section {
+        padding: 10px;
+    }
+}
